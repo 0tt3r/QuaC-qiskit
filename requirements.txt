@@ -1,0 +1,2 @@
+qiskit-terra>=0.19.1
+QuaC>=1.0
