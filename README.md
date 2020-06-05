@@ -2,19 +2,56 @@
 
 This Python package serves as an easily-installable interface between Qiskit and QuaC (Quantum in C), a fast, highly parallel noisy quantum system simulator. This interface is useful for two primary reasons.
 
-1.  It allows potential users to interact with QuaC via an already-familar interface (i.e., Qiskit)
+1.  It allows potential users to interact with QuaC via an already-familiar interface (i.e., Qiskit)
 
 2.  It allows QuaC to leverage the many excellent features (like circuit optimization) present in Qiskit
 
-The code in this repository is based on qiskit provider/backend code structure for maximum compatibility and ease of use (current qiskit providers include Aer and IBMQ).
+The code in this repository is based on the Qiskit provider/backend code structure for maximum compatibility and ease of use (current Qiskit providers include Aer and IBMQ).
 
 ## How do I install the QuaC Qiskit Provider?
-Neither QuaC nor its Qiskit Provider are on PyPI yet. In order to install QuaC, please proceed to the
-QuaC website (linked below under more information) and follow the `README` instructions on `master` to install
-QuaC. Then, clone this repository and run `pip install .` in its root directory.
+Neither QuaC nor its Qiskit Provider are on PyPI yet. In order to install QuaC, run
+`git clone -b diagonalize-python-interface https://github.com/0tt3r/QuaC` to clone the latest version of QuaC. Then, run the following command to build and install QuaC
+and its Python bindings (instructions also available on the QuaC repository):
+
+```
+git clone -b maint https://bitbucket.org/petsc/petsc petsc
+cd petsc
+
+export PETSC_DIR=${PWD}
+export PETSC_ARCH=linux-gnu-c-complex 
+
+./configure --with-scalar-type=complex --download-mpich --download-fblaslapack=1 \
+  --with-debugging=no COPTFLAGS=-O3 CXXOPTFLAGS=-O3 FOPTFLAGS=-O3 --with-64-bit-indices
+make PETSC_DIR=${PETSC_DIR} PETSC_ARCH=${PETSC_ARCH} all
+
+cd ..
+git clone -b maint https://bitbucket.org/slepc/slepc
+cd slepc
+
+export SLEPC_DIR=${PWD}
+./configure
+make SLEPC_DIR=${SLEPC_DIR}
+
+cd ..
+git clone -b diagonalize-python-interface https://github.com/0tt3r/QuaC
+cd QuaC
+make
+cd python
+make
+python setup.py install
+```
+
+Now that QuaC is installed, you can install the Qiskit Quac provider:
+
+```
+git clone https://github.com/0tt3r/QuaC-qiskit
+cd QuaC-qiskit
+pip install .
+```
 
 ## How do I use QuaC as a provider?
-Just the same as you would use Aer or IBMQ as your provider. An object `Quac` is provided upon import for interfacing with and managing backends.
+Just the same as you would use Aer or IBMQ as your provider. An object `Quac` is provided upon import for interfacing with and managing backends, which is designed
+to be similar in use to the imported Aer object.
 ```python
 from qiskit import Aer
 from qiskit import IBMQ
@@ -22,21 +59,63 @@ from qiskit.providers.quac import Quac
 ```
 
 ## What kinds of backends are supported?
-You can see the supported backends by running the following command:
+You can see supported backends by running the following command:
 ```python
 from qiskit.providers.quac import Quac
 Quac.backends()
 ```
-One backend called `density_simulator` is currently supported, but others will soon be added.
-The `density_simulator` backend prints a matrix representing the frequencies of given
-quantum experiment outcomes.
+A plethora of IBMQ hardware backends can be simulated in QuaC.
+These hardware backends are those available via Qiskit:
+1. armonk
+2. yorktown
+3. tenerife
+4. ourense
+5. vigo
+6. valencia
+7. essex
+8. london
+9. burlington
+10. melbourne
+11. rueschlikon
+12. tokyo
+13. poughkeepsie
+14. almaden
+15. singapore
+16. johannesburg
+17. boeblingen
+18. cambridge
+19. paris
+20. rochester
+21. rome
+22. athens
+
+Each physical hardware backend has two types of QuaC backends: a density backend and a
+counts backend. Additional types of backends are planned, and will be described in this README upon their addition.
+The density backend returns an object that can be used to interface with the density matrix of a
+quantum system (WARNING: this is currently under construction, so the density matrix interface
+is only a template and is not functional). The counts backends (fully functional) run a multinomial
+experiment given the probabilities of output states to generate frequency lists.
+
+If you are operating on very specific hardware or hardware not available to the general public, this
+plugin can still be used. Custom properties and configurations can be loaded into the QuaC/Qiskit
+provider, but must be in Qiskit IBMQ format. Please reference [this link](https://github.com/Qiskit/qiskit-terra/tree/master/qiskit/test/mock/backends/yorktown)
+to the Qiskit-Terra GitHub repository JSON configuration files for the Yorktown IBMQ backend.
+
+## Where can I find examples?
+A growing list of examples of using this plugin can be found under the `examples` folder in this repository. Examples exist in both
+Python file form and Jupyter notebook form.
 
 ## Where can I find more information about QuaC?
-The main QuaC repository is located on GitHub [here](https://github.com/0tt3r/QuaC/). A branch called `python-interface` contains Python bindings.
+The main QuaC repository is located on GitHub [here](https://github.com/0tt3r/QuaC/). A branch called
+`diagonalize-python-interface` contains the most recently updated Python bindings.
 Additionally, you may also wish to check the QuaC website [here](https://0tt3r.github.io/QuaC/).
 
-## Where can I find documentation of this package?
-Please check the `docs` folder in this repository.
+## Where can I find documentation for this package?
+Please check the `docs` folder in this repository. Read-the-docs style html pages can be generated by
+executing `make html` inside the `docs` folder. In the future, these will be hosted on a website.
 
 ## Where can I send feature requests?
 Please open an `issue` describing the feature you would like to see added.
+
+## How do I run tests?
+To run individual unit tests, just run them as you would any other Python script.

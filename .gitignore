@@ -1,4 +1,4 @@
-# Generic Python .gitignore provided by GitHub
+# Generic Python .gitignore provided by GitHub with minor additions
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

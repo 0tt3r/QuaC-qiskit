@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""This module contains various kinds of QuaC-related exceptions a user may encounter."""
+"""This module contains various kinds of QuaC-related exceptions a user may encounter"""
 
 
 class QuacBackendError(Exception):
@@ -11,10 +11,11 @@ class QuacBackendError(Exception):
     def __init__(self, message):
         """
         Initialize backend not found exception
+
         :param message: exception message
         """
         self.message = message
-        super().__init__()
+        super().__init__(message)
 
 
 class QuacOptionsError(Exception):
@@ -25,7 +26,8 @@ class QuacOptionsError(Exception):
     def __init__(self, message):
         """
         Initialize faulty execution options exception
+
         :param message: exception message
         """
         self.message = message
-        super().__init__()
+        super().__init__(message)

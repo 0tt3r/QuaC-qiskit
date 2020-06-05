@@ -9,7 +9,7 @@ with open("requirements.txt", "r") as req_file:
 setuptools.setup(
     name="quac-qiskit",
     version="0.0.1",
-    author="quac/Qiskit Integration Development Team",
+    author="The QuaC/Qiskit Integration Development Team",
     author_email="",
     description="A package to allow simulation of quantum systems built in Qiskit on quac simulators",
     long_description=long_description,
