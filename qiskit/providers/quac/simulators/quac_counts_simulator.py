@@ -1,24 +1,24 @@
 # -*- coding: utf-8 -*-
 
-"""This module contains backend functionality for obtaining the density matrix from QuaC
-simulations of a Qiskit-defined quantum circuit. Functionality is located in the
-QuacDensitySimulator class. The configuration of this backend simulator is also found in the
-QuacDensitySimulator in the class constructor.
+"""This module contains a QuaC backend for obtaining the frequency results of qobj experiments run
+a specified number of times. This simulator is subject to stochastic noise. For comparisons and
+benchmarking, the density backend is recommended.
 """
 
-import uuid
 import time
-from qiskit.providers.quac.models import QuacJob
-from qiskit.qobj.qasm_qobj import QasmQobj
+import numpy as np
+from collections import defaultdict
+from qiskit.assembler import disassemble
 from qiskit.result import Result
+from qiskit.qobj.qasm_qobj import QasmQobj
 from qiskit.providers.models.backendproperties import BackendProperties
-from qiskit.providers.quac.simulators.quac_simulator import QuacSimulator
+from .quac_simulator import QuacSimulator
 from ..utils import choose_index
 
 
 class QuacCountsSimulator(QuacSimulator):
-    """Class for simulating a Qiskit-defined quantum experiment and printing its resulting
-    density matrix
+    """Class for simulating a Qiskit-defined quantum experiment a number of times and returning
+    a dictionary of the frequencies of each resulting pure state
     """
 
     def name(self) -> str:
@@ -36,74 +36,53 @@ class QuacCountsSimulator(QuacSimulator):
         """
         return self._properties
 
-    def run(self, qobj: QasmQobj, **run_config) -> QuacJob:
-        """Runs quantum experiments encoded in Qiskit Qasm quantum objects on either a thread
-        executor pool or a process executor pool, depending on the platform
-
-        :param qobj: an assembled QASM quantum object bundling all simulation information and
-            experiments (NOTE: Pulse quantum objects not yet supported)
-        :param run_config: a dictionary containing optional injected parameters, including the
-            following keys:
-
-            1. lindblad: a dictionary representing the Lindblad emission and dephasing time
-            constants in units of nanoseconds. Here is an example for the lindblad dictionary
-            for a two-qubit system:
-
-                .. code-block:: python
-
-                    lindblad = {
-                        "0": {
-                            "T1": 60000,
-                            "T2": 50000
-                         },
-                        "1": {
-                            "T1": 60000,
-                            "T2": 50000
-                        }
-                    }
-
-            2. gate_times: a list of integers specifying what time (in nanoseconds) to run each
-            gate the user has added to their experiments corresponding to gates in the order they
-            were added
-
-            3. simulation_length: the total number of nanoseconds to run the simulator
-
-            4. time_step: length between discrete time steps in QuaC simulation (nanoseconds)
-        :return: a submitted QuacJob running the experiments in qobj
-        """
-        job = QuacJob(self, str(uuid.uuid4()), self._run_job, qobj, **run_config)
-        job.submit()
-
-        return job
-
     def _run_job(self, job_id: str, qobj: QasmQobj, **run_config) -> Result:
-        qobj_start = time.perf_counter()
+        """Specifies how to run a quantum object job on this backend. This is the method that
+        changes between types of QuaC backends.
 
+        :param job_id: a uuid4 string to uniquely identify this job
+        :param qobj: an assembled quantum object of experiments
+        :param run_config: injected parameters
+        :return: a Qiskit Result object
+        """
+        qobj_start = time.perf_counter()
         results = list()
+
         for experiment in qobj.experiments:
             exp_start = time.perf_counter()
-            final_quac_instance = super().run_experiment(experiment, **run_config)
+            final_quac_instance, qubit_measurements = super()._run_experiment(experiment, **run_config)
 
-            # Create a frequency list for multinomial experiment
-            frequencies = {}
+            # Create a frequency defaultdict for multinomial experiment tallying
+            frequencies = defaultdict(lambda: 0)
 
-            for num in range(0, 2 ** final_quac_instance.num_qubits):
-                frequencies[hex(num)] = 0
+            # Get probabilities of all states occurring and try to adjust them by measurement errors
+            bitstring_probs = np.array(final_quac_instance.get_bitstring_probs())
 
-            bitstring_probs = final_quac_instance.get_bitstring_probs()
+            if self._meas:
+                # If measurement error simulation is turned on, adjust probabilities accordingly
+                bitstring_probs = np.dot(self._measurement_error_matrix, bitstring_probs)
+
             for _ in range(0, qobj.config.shots):
-                outcome = choose_index(bitstring_probs)
-                qiskit_outcome = hex(int("0b" + bin(outcome)[2:][::-1], 2))  # convert MSB schemes
-                frequencies[qiskit_outcome] += 1
+                # Run multinomial experiment and filter out unmeasured qubits from results
+                outcome_state = bin(choose_index(bitstring_probs))[2:]
+                padded_outcome_state = list(outcome_state.zfill(qobj.config.n_qubits))
+                classical_register = ["0"] * qobj.config.memory_slots
 
-            # Filter out keys whose values are 0
-            filtered_frequencies = {state: hits
-                                    for (state, hits) in frequencies.items() if hits != 0}
+                for qubit, outcome in enumerate(padded_outcome_state):
+                    # Only measure specified qubits into the classical register
+                    if qubit in qubit_measurements:
+                        for register_slot in qubit_measurements[qubit]:
+                            classical_register[register_slot] = outcome
+
+                classical_register.reverse()  # convert to Qiskit MSB format
+                classical_register_hex = hex(int(''.join(classical_register), 2))
+
+                frequencies[classical_register_hex] += 1
 
             results.append({
                 "name": experiment.header.name,
                 "shots": qobj.config.shots,
-                "data": {"counts": filtered_frequencies},
+                "data": {"counts": dict(frequencies)},
                 "status": "DONE",
                 "success": True,
                 "time_taken": time.perf_counter() - exp_start,

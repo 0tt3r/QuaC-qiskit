@@ -7,8 +7,8 @@ gates and functionality become available.
 
 from qiskit.providers.models.backendconfiguration import QasmBackendConfiguration
 
-generic_configuration = QasmBackendConfiguration(
-    backend_name="generic",
+generic_quac_configuration = QasmBackendConfiguration(
+    backend_name="generic_quac",
     backend_version="0.0.1",
     n_qubits=2,
     basis_gates=['id', 'cx', 'h', 'x', 'y', 'z',
