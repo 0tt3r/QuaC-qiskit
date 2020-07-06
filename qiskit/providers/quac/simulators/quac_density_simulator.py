@@ -57,7 +57,6 @@ class QuacDensitySimulator(QuacSimulator):
             bitstring_probs = np.array(final_quac_instance.get_bitstring_probs())
             if self._meas:
                 # If measurement error simulation is turned on, adjust probabilities accordingly
-                print("Measurement adjustment...")
                 bitstring_probs = np.dot(self._measurement_error_matrix, bitstring_probs)
 
             # Switch probability list least significant bit convention and add to dictionary
