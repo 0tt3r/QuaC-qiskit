@@ -8,7 +8,6 @@ benchmarking, the density backend is recommended.
 import time
 import numpy as np
 from collections import defaultdict
-from qiskit.assembler import disassemble
 from qiskit.result import Result
 from qiskit.qobj.qasm_qobj import QasmQobj
 from qiskit.providers.models.backendproperties import BackendProperties
@@ -36,6 +35,11 @@ class QuacCountsSimulator(QuacSimulator):
         """
         return self._properties
 
+    def setup_measurement_error(self):
+        """Informs counts backend that measurement errors should be applied during trials
+        """
+        self._meas_set = True
+
     def _run_job(self, job_id: str, qobj: QasmQobj, **run_config) -> Result:
         """Specifies how to run a quantum object job on this backend. This is the method that
         changes between types of QuaC backends.
@@ -58,10 +62,6 @@ class QuacCountsSimulator(QuacSimulator):
             # Get probabilities of all states occurring and try to adjust them by measurement errors
             bitstring_probs = np.array(final_quac_instance.get_bitstring_probs())
 
-            if self._meas:
-                # If measurement error simulation is turned on, adjust probabilities accordingly
-                bitstring_probs = np.dot(self._measurement_error_matrix, bitstring_probs)
-
             for _ in range(0, qobj.config.shots):
                 # Run multinomial experiment and filter out unmeasured qubits from results
                 outcome_state = bin(choose_index(bitstring_probs))[2:]
@@ -69,6 +69,14 @@ class QuacCountsSimulator(QuacSimulator):
                 classical_register = ["0"] * qobj.config.memory_slots
 
                 for qubit, outcome in enumerate(padded_outcome_state):
+                    if self._meas_set:
+                        # Alter outcome if measurement error is desired
+                        flipped_outcome = str(int(outcome) ^ 1)
+                        flip_prob = self._properties.qubit_property(qubit,
+                                                                    f"prob_meas{flipped_outcome}_prep{outcome}")[0]
+                        if not choose_index([flip_prob, 1 - flip_prob]):
+                            outcome = flipped_outcome
+
                     # Only measure specified qubits into the classical register
                     if qubit in qubit_measurements:
                         for register_slot in qubit_measurements[qubit]:

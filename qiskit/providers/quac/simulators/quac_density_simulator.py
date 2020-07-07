@@ -7,10 +7,12 @@ QuacDensitySimulator class.
 
 import time
 import numpy as np
+import warnings
 from collections import defaultdict
 from qiskit.result import Result
 from qiskit.qobj.qasm_qobj import QasmQobj
 from qiskit.providers.models.backendproperties import BackendProperties
+from qiskit.providers import BackendPropertyError
 from .quac_simulator import QuacSimulator
 
 
@@ -34,6 +36,31 @@ class QuacDensitySimulator(QuacSimulator):
         """
         return self._properties
 
+    def setup_measurement_error(self):
+        """Builds a matrix that operates on raw bitstring probabilities to transform them to
+        a vector of probabilities adjusted for measurement errors
+        """
+        if self._meas_set:
+            return  # already built matrix
+
+        # Construct probability matrix for measurement error adjustments
+        for qubit in range(self.configuration().n_qubits):
+            # Not all backends have measurement errors added
+            try:
+                prob_meas0_prep1 = self._properties.qubit_property(qubit, "prob_meas0_prep1")[0]
+                prob_meas1_prep0 = self._properties.qubit_property(qubit, "prob_meas1_prep0")[0]
+                self._meas_set = True
+            except BackendPropertyError:
+                warnings.warn("Measurement error simulation not supported on this backend.")
+                break
+
+            qubit_measurement_error_matrix = np.array([
+                [1 - prob_meas1_prep0, prob_meas0_prep1],
+                [prob_meas1_prep0, 1 - prob_meas0_prep1]
+            ])
+
+            self._measurement_error_matrix = np.kron(self._measurement_error_matrix, qubit_measurement_error_matrix)
+
     def _run_job(self, job_id: str, qobj: QasmQobj, **run_config) -> Result:
         """Specifies how to run a quantum object job on this backend. This is the method that
         changes between types of QuaC backends.
@@ -55,7 +82,7 @@ class QuacDensitySimulator(QuacSimulator):
 
             # Get probabilities of all states occurring and try to adjust them by measurement errors
             bitstring_probs = np.array(final_quac_instance.get_bitstring_probs())
-            if self._meas:
+            if self._meas_set:
                 # If measurement error simulation is turned on, adjust probabilities accordingly
                 bitstring_probs = np.dot(self._measurement_error_matrix, bitstring_probs)
 

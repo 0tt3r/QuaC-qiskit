@@ -146,7 +146,8 @@ cython_debug/
 .DS_Store
 
 # Anything in the test debugging output
-./test/output
+test/output/
 
 # Anything in the example debugging folder
-./examples/debug
+examples/debug/
+

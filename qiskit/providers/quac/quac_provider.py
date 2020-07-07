@@ -75,7 +75,7 @@ class QuacProvider(BaseProvider):
         """
         if not name:
             if meas:
-                self._backends[0].build_meas_error_matrix()
+                self._backends[0].setup_measurement_error()
             return self._backends[0]  # if no name is provided, serve the first backend listed
 
         backends = list(filter(lambda backend: backend.name() == name, self._backends))
@@ -84,5 +84,5 @@ class QuacProvider(BaseProvider):
             raise QuacBackendError("nonexistent backend")
 
         if meas:
-            backends[0].build_meas_error_matrix()  # include measurement error if desired
+            backends[0].setup_measurement_error()  # include measurement error if desired
         return backends[0]

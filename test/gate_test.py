@@ -157,7 +157,7 @@ class GateTestCase(unittest.TestCase):
             num_qubits = random.randrange(1, 6)
 
             # Generate random circuit and transpile it to run on specific hardware
-            random_circ = random_circuit(num_qubits, 2, measure=False)
+            random_circ = random_circuit(num_qubits, 2, measure=True)
             transpiled_random_circ = transpile(random_circ,
                                                backend=self.quac_simulator,
                                                optimization_level=0)

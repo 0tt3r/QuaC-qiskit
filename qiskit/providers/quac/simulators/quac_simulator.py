@@ -38,7 +38,7 @@ class QuacSimulator(BaseBackend):
         :param hardware_props: desired hardware properties
         """
         self._hardware_specified = True
-        self._meas = False
+        self._meas_set = False
 
         if hardware_conf and hardware_props:
             self._configuration = hardware_conf
@@ -51,30 +51,9 @@ class QuacSimulator(BaseBackend):
 
         super().__init__(self._configuration, "QuacProvider")  # QuaC is the provider
 
-    def build_meas_error_matrix(self):
-        """Builds a matrix that operates on raw bitstring probabilities to transform them to
-        a vector of probabilities adjusted for measurement errors
-        """
-        if self._meas:
-            return  # already built matrix
-
-        # Construct probability matrix for measurement error adjustments
-        for qubit in range(self.configuration().n_qubits):
-            # Not all backends have measurement errors added
-            try:
-                prob_meas0_prep1 = self._properties.qubit_property(qubit, "prob_meas0_prep1")[0]
-                prob_meas1_prep0 = self._properties.qubit_property(qubit, "prob_meas1_prep0")[0]
-                self._meas = True
-            except BackendPropertyError:
-                warnings.warn("Measurement error simulation not supported on this backend.")
-                break
-
-            qubit_measurement_error_matrix = np.array([
-                [1 - prob_meas0_prep1, prob_meas0_prep1],
-                [prob_meas1_prep0, 1 - prob_meas1_prep0]
-            ])
-
-            self._measurement_error_matrix = np.kron(self._measurement_error_matrix, qubit_measurement_error_matrix)
+    @abstractmethod
+    def setup_measurement_error(self):
+        pass
 
     def properties(self) -> BackendProperties:
         """Allows access to hardware backend properties
