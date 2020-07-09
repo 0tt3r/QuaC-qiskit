@@ -6,6 +6,7 @@
 from typing import List, Union
 import random
 import numpy as np
+from scipy.special import kl_div
 
 
 def choose_index(prob_dist: Union[List[float], np.array]) -> int:
@@ -42,3 +43,22 @@ def get_vec_angle(vec1: List, vec2: List) -> float:
     diff_degree = np.clip(diff_degree, -1, 1)
     diff_degree = np.arccos(diff_degree) * 180 / np.pi
     return diff_degree
+
+
+def kl_dist_smoothing(distribution1: np.array, distribution2: np.array, epsilon: float) -> float:
+    """Calculates the Kullback-Leibler Divergence of distribution2 from distribution1.
+    :param distribution1: a numpy array representing a probability distribution
+    :param distribution2: a numpy array representing a probability distribution
+    :param epsilon: the smoothing parameter
+    :return: the Kullback-Leibler divergence
+    """
+    # Performs smoothing
+    distributions = [distribution1, distribution2]
+    smoothed_distributions = []
+    for distribution in distributions:
+        nonzeros = np.count_nonzero(distribution)
+        zeros = len(distribution) - nonzeros
+        smoothed_distributions.append([epsilon if prob == 0 else prob - zeros * epsilon / nonzeros
+                                       for prob in distribution])
+
+    return sum(kl_div(smoothed_distributions[0], smoothed_distributions[1]))

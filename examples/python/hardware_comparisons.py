@@ -8,16 +8,16 @@ from qiskit.providers.quac import Quac
 from qiskit.ignis.characterization.coherence import *
 from qiskit.ignis.characterization.coherence import T1Fitter, T2Fitter
 from qiskit.providers.ibmq.ibmqbackend import JobStatus
-from qiskit.providers.quac.utils import counts_to_list, get_vec_angle
+from qiskit.providers.quac.utils import counts_to_list, get_vec_angle, kl_dist_smoothing
 
 
 def main():
     # Get backends
-    plugin_sim = Quac.get_backend('fake_yorktown_density_simulator', meas=True)
+    plugin_sim = Quac.get_backend('fake_london_counts_simulator', meas=True)
 
     IBMQ.load_account()
     provider = IBMQ.get_provider(hub="ibm-q-ornl", group="anl", project="chm168")
-    backend = provider.get_backend("ibmq_5_yorktown")
+    backend = provider.get_backend("ibmq_london")
 
     # Get calibration circuits
     hardware_props = backend.properties()
@@ -50,13 +50,14 @@ def main():
         circs.append(circ)
 
     # Get experimental results
-    # hardware_experiment_job = execute(t1_circs + t2_circs + circs, backend, optimization_level=0)
-    #
-    # print("Running job", end="")
-    # while hardware_experiment_job.status() != JobStatus.DONE:
-    #     print(".", end="")
-    #     time.sleep(5)
-    hardware_experiment_job = backend.retrieve_job("insert_here")
+    hardware_experiment_job = execute(t1_circs + t2_circs + circs, backend,
+                                      optimization_level=0, shots=8000)
+
+    print("Running job", end="")
+    while hardware_experiment_job.status() != JobStatus.DONE:
+        print(".", end="")
+        time.sleep(5)
+    # hardware_experiment_job = backend.retrieve_job("5f04c329790ba000127184e9")
 
     t1_fit = T1Fitter(hardware_experiment_job.result(), t1_delay, qubits,
                       fit_p0=[1, 80000, 0],
@@ -77,13 +78,14 @@ def main():
         lindblad[str(i)]["T2"] = t2_fit.time(i)
 
     # Get plugin simulation results
-    plugin_experiment_job = execute(circs, plugin_sim, optimization_level=0, lindblad=lindblad)
+    plugin_experiment_job = execute(circs, plugin_sim, optimization_level=0, lindblad=lindblad, shots=8000)
 
     # Perform distribution comparisons
     for circ in circs:
         real_counts = counts_to_list(hardware_experiment_job.result().get_counts(circ))
         real_distribution = [count / sum(real_counts) for count in real_counts]
-        plugin_distribution = counts_to_list(plugin_experiment_job.result().get_counts(circ))
+        plugin_counts = counts_to_list(plugin_experiment_job.result().get_counts(circ))
+        plugin_distribution = [count / sum(plugin_counts) for count in plugin_counts]
 
         print(f"Counts Comparison for Circuit {circ.name}\n------------------------")
         for cind in range(len(plugin_distribution)):
@@ -94,8 +96,18 @@ def main():
             print(f"{real_distribution[cind]}\t{plugin_distribution[cind]}")
 
         print(f"Angle difference: {get_vec_angle(real_distribution, plugin_distribution)}")
+        print(f"""Kullback-Leibler divergence:
+                {kl_dist_smoothing(np.array(real_distribution),np.array(plugin_distribution), 1e-5)
+        }""")
 
-        ks_pvalue = ks_2samp(real_distribution, plugin_distribution)[1]
+        # Make experimental results from counts
+        real_experiments = []
+        plugin_experiments = []
+        for exp_ind in range(len(real_counts)):
+            real_experiments.append([exp_ind] * real_counts[exp_ind])
+            plugin_experiments.append([exp_ind] * plugin_counts[exp_ind])
+
+        ks_pvalue = ks_2samp(real_experiments, plugin_experiments)[1]
         if ks_pvalue > 0.05:
             print(f"Distributions are identical (p={ks_pvalue}).")
         else:
