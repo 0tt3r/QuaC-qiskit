@@ -43,7 +43,7 @@ class QuacSimulator(BaseBackend):
         if hardware_conf and hardware_props:
             self._configuration = hardware_conf
             self._properties = hardware_props
-            self._measurement_error_matrix = np.array([1])
+            self._measurement_error_matrices = []
         else:
             self._hardware_specified = False
             self._configuration = generic_quac_configuration

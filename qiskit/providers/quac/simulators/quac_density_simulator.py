@@ -7,6 +7,7 @@ QuacDensitySimulator class.
 
 import time
 import numpy as np
+from scipy import sparse
 import warnings
 from collections import defaultdict
 from qiskit.result import Result
@@ -59,7 +60,18 @@ class QuacDensitySimulator(QuacSimulator):
                 [prob_meas1_prep0, 1 - prob_meas0_prep1]
             ])
 
-            self._measurement_error_matrix = np.kron(self._measurement_error_matrix, qubit_measurement_error_matrix)
+            expanded_qubit_meas_mat = sparse.csr_matrix(np.array([1]))
+            for ind in range(self.configuration().n_qubits):
+                if qubit == ind:
+                    expanded_qubit_meas_mat = sparse.kron(expanded_qubit_meas_mat,
+                                                          qubit_measurement_error_matrix,
+                                                          format='csr')
+                else:
+                    expanded_qubit_meas_mat = sparse.kron(expanded_qubit_meas_mat,
+                                                          sparse.eye(2),
+                                                          format='csr')
+
+            self._measurement_error_matrices.append(expanded_qubit_meas_mat)
 
     def _run_job(self, job_id: str, qobj: QasmQobj, **run_config) -> Result:
         """Specifies how to run a quantum object job on this backend. This is the method that
@@ -84,7 +96,8 @@ class QuacDensitySimulator(QuacSimulator):
             bitstring_probs = np.array(final_quac_instance.get_bitstring_probs())
             if self._meas_set:
                 # If measurement error simulation is turned on, adjust probabilities accordingly
-                bitstring_probs = np.dot(self._measurement_error_matrix, bitstring_probs)
+                for expanded_qubit_meas_mat in self._measurement_error_matrices:
+                    bitstring_probs = np.dot(expanded_qubit_meas_mat, bitstring_probs)
 
             # Switch probability list least significant bit convention and add to dictionary
             for decimal_state, state_prob in enumerate(bitstring_probs):
