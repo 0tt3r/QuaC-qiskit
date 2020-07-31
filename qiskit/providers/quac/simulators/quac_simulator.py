@@ -6,10 +6,9 @@ class. The configuration of this backend simulator is also found in QuacSimulato
 constructor.
 """
 
-from typing import Optional, Tuple, Dict, List
+from typing import Optional, Tuple, Dict, List, Union
 from abc import abstractmethod
 from collections import defaultdict
-import numpy as np
 import warnings
 import uuid
 import quac
@@ -20,9 +19,10 @@ from qiskit.qobj.qasm_qobj import QasmQobj
 from qiskit.qobj.qasm_qobj import QasmQobjExperiment
 from qiskit.providers.basebackend import BaseBackend
 from qiskit.providers.exceptions import BackendPropertyError
-from qiskit.providers.models.backendconfiguration import BackendConfiguration
+from qiskit.providers.models.backendconfiguration import BackendConfiguration, QasmBackendConfiguration
 from qiskit.providers.models.backendproperties import BackendProperties
-from qiskit.providers.quac.models import generic_quac_configuration, QuacJob
+from qiskit.providers.quac.utils import list_schedule_experiment
+from qiskit.providers.quac.models import QuacJob
 from qiskit.providers.quac.exceptions import QuacOptionsError, QuacBackendError
 
 
@@ -30,7 +30,7 @@ class QuacSimulator(BaseBackend):
     """General class for simulating a Qiskit-defined quantum experiment in QuaC
     """
 
-    def __init__(self, hardware_conf: Optional[BackendConfiguration] = None,
+    def __init__(self, hardware_conf: Union[BackendConfiguration, QasmBackendConfiguration],
                  hardware_props: Optional[BackendProperties] = None):
         """Initialize hardware and build measurement error matrix
 
@@ -40,14 +40,13 @@ class QuacSimulator(BaseBackend):
         self._hardware_specified = True
         self._meas_set = False
 
-        if hardware_conf and hardware_props:
-            self._configuration = hardware_conf
-            self._properties = hardware_props
-            self._measurement_error_matrices = []
-        else:
+        self._configuration = hardware_conf
+        self._properties = hardware_props
+        self._measurement_error_matrices = []
+
+        if not hardware_props:
+            # Generic configuration
             self._hardware_specified = False
-            self._configuration = generic_quac_configuration
-            self._properties = None
 
         super().__init__(self._configuration, "QuacProvider")  # QuaC is the provider
 
@@ -117,47 +116,41 @@ class QuacSimulator(BaseBackend):
             the duration of time to run the simulation
         :return: a QuaC instance that has run the experiment
         """
-        # Create a new instance of the QuaC simulator
-        quac_simulator = quac.Instance()
-
-        # Get gate timing data and Lindblad noise parameters injected by provider via run_config
+        # Gather parameters
         lindblad = run_config.get("lindblad")
         no_noise = run_config.get("no_noise")
+        gate_times = run_config.get("gate_times")
+        simulation_length = run_config.get("simulation_length")
+        dt = run_config.get("time_step")
+        zz = run_config.get("zz")
+
+        # Schedule experiment
+        instruction_time_order = list_schedule_experiment(qexp, self._properties)
+
+        # Process parameters
         if not self._hardware_specified and not lindblad and not no_noise:
             raise QuacOptionsError("No hardware specs and no user-defined noise model provided")
 
-        # Attempt to retrieve gate times, otherwise calculate them
-        gate_times = run_config.get("gate_times")
+        if not dt:
+            dt = 10  # default time step value (ns)
+
+        if not simulation_length and not gate_times:
+            simulation_length = instruction_time_order[-1][1]  # note that measurement is instantaneous
+        elif not simulation_length and gate_times:
+            simulation_length = gate_times[-1]
+
+        if simulation_length < instruction_time_order[-1][1]:
+            raise QuacOptionsError("Simulation length not long enough to accommodate circuit")
+
+        # Create a new instance of the QuaC simulator
+        quac_simulator = quac.Instance()
 
         # Build the circuit in QuaC
         quac_circuit = quac.Circuit()
         quac_circuit.initialize(len(qexp.instructions))
 
         # Keep track of when to schedule gates and which qubits are measured
-        scheduling_times = [1] * qexp.config.n_qubits
         qubit_measurements = defaultdict(lambda: [])
-        instruction_time_order = []
-
-        # Schedule gate times
-        for instruction in qexp.instructions:
-            try:
-                gate_length = self.properties().gate_property(gate=instruction.name,
-                                                              qubits=instruction.qubits,
-                                                              name="gate_length")[0]
-                gate_length *= 1e9  # convert to natural time unit of ns
-            except (BackendPropertyError, AttributeError):
-                gate_length = 0  # TODO: should measure have a time?
-
-            gate_application_time = max([scheduling_times[qubit] for qubit in instruction.qubits])
-
-            # print(f"Applying gate {instruction.name} on {instruction.qubits} at time {gate_application_time} ns.")
-            for qubit in instruction.qubits:
-                scheduling_times[qubit] = gate_application_time
-                scheduling_times[qubit] += gate_length
-
-            instruction_time_order.append((instruction, gate_application_time))
-
-        instruction_time_order.sort(key=lambda pair: pair[1])  # sort instructions by time
 
         # Add instructions
         for instruction, gate_application_time in instruction_time_order:
@@ -205,7 +198,7 @@ class QuacSimulator(BaseBackend):
                                       qubit1=instruction.qubits[0],
                                       time=gate_application_time)
             else:
-                # TODO: other two-qubit gates besides CNOT will error here
+                # TODO: other two-qubit gates besides CNOT will throw an error here
                 quac_circuit.add_gate(gate=instruction.name,
                                       qubit1=instruction.qubits[0],
                                       time=gate_application_time)
@@ -229,7 +222,7 @@ class QuacSimulator(BaseBackend):
         quac_simulator.create_qubits()
 
         # Add Lindblad emission and dephasing noise terms
-        for qubit_index in range(0, quac_simulator.num_qubits):
+        for qubit_index in range(quac_simulator.num_qubits):
             # Note: specifying no_noise overrides lindblad, lindblad overrides hardware
             if self._hardware_specified and not lindblad and not no_noise:
                 # Grab T1 and T2 times and convert them to ns
@@ -244,21 +237,16 @@ class QuacSimulator(BaseBackend):
                 t1_time = float('inf')
                 t2_time = float('inf')
 
-            # NOTE: QuaC expects 1/T1 and 1/T2 instead of T1 and T2
+            # NOTE: QuaC expects 1/T1 and 1/2T2* instead of T1 and T2
             quac_simulator.add_lindblad_emission(qubit_index, 1 / t1_time)
-            quac_simulator.add_lindblad_dephasing(qubit_index, 1 / t2_time)
+            quac_simulator.add_lindblad_dephasing(qubit_index, 2 / t2_time - 1 / t1_time)
 
-        # Attempt to retrieve simulation length, otherwise calculate it
-        simulation_length = run_config.get("simulation_length")
-        if not simulation_length and not gate_times:
-            simulation_length = max(scheduling_times)
-        elif not simulation_length and gate_times:
-            simulation_length = gate_times[-1] + 500
-
-        # Attempt to retrieve simulation time step
-        dt = run_config.get("time_step")
-        if not dt:
-            dt = 10  # default time step value (ns)
+        # Add zz coupling terms, if present
+        if zz:
+            for pair in zz:
+                qubit1, qubit2 = pair
+                zeta = zz[pair]
+                quac_simulator.add_ham_zz_coupling(qubit1=qubit1, qubit2=qubit2, zeta=zeta)
 
         # Run the experiment
         quac_simulator.create_density_matrix()
@@ -470,8 +458,8 @@ class QuacSimulator(BaseBackend):
 
         return quac_simulator, dict(qubit_measurements)
 
-    def _run_experiment_no_scheduling(self, qexp: QasmQobjExperiment,
-                                      **run_config) -> Tuple[quac.Instance, Dict[int, List[int]]]:
+    def _run_experiment_none(self, qexp: QasmQobjExperiment,
+                             **run_config) -> Tuple[quac.Instance, Dict[int, List[int]]]:
         """Runs quantum experiments/circuits encoded in Qiskit QASM quantum objects
         Note: Pulse quantum objects not supported
 

@@ -161,7 +161,6 @@ class GateTestCase(unittest.TestCase):
             transpiled_random_circ = transpile(random_circ,
                                                backend=self.quac_simulator,
                                                optimization_level=0)
-            transpiled_random_circ.measure_all()
 
             # Record circuits as images and OpenQASM files
             with open(f"./output/{circuit_index}.qasm", "w") as qasm:

@@ -91,15 +91,21 @@ These hardware backends are those available via Qiskit:
 
 Each physical hardware backend has two types of QuaC backends: a density backend and a
 counts backend. Additional types of backends are planned, and will be described in this README upon their addition.
-The density backend returns an object that can be used to interface with the density matrix of a
-quantum system (WARNING: this is currently under construction, so the density matrix interface
-is only a template and is not functional). The counts backends (fully functional) run a multinomial
+The density backend returns a list of probabilities free of stochastic noise. The counts backends run a multinomial
 experiment given the probabilities of output states to generate frequency lists.
 
 If you are operating on very specific hardware or hardware not available to the general public, this
 plugin can still be used. Custom properties and configurations can be loaded into the QuaC/Qiskit
 provider, but must be in Qiskit IBMQ format. Please reference [this link](https://github.com/Qiskit/qiskit-terra/tree/master/qiskit/test/mock/backends/yorktown)
 to the Qiskit-Terra GitHub repository JSON configuration files for the Yorktown IBMQ backend.
+
+An alternative (but less customizable) way of specifying custom backends is by retrieving either the
+`generic_quac_density_simulator` or `generic_quac_counts_simulator` backends and including specific
+parameters as `kwargs`. As an example, suppose you want to run some test experiments with custom T1 and
+T2 noise, a custom basis gate set, and two qubits. You might define a T1/T2 noise dictionary called
+`lindblad` and then select a tailored generic backend as follows:
+`backend=Quac.get_backend('generic_quac_density_simulator', n_qubits=2, basis_gates=['id', 'u3'])'`.
+Then, results can be viewed as follows: `execute(qc, backend, lindblad=lindblad).result().get_counts()`.
 
 ## Where can I find examples?
 A growing list of examples of using this plugin can be found under the `examples` folder in this repository. Examples exist in both

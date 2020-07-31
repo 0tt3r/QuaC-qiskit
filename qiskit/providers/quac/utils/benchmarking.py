@@ -4,9 +4,9 @@
 well as functions useful for benchmarking QuaC against Qiskit.
 """
 
-from typing import Union, Tuple, List
+from typing import Union, Tuple, List, Dict
 import numpy as np
-from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
+from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister, execute
 from qiskit.converters import circuit_to_dag
 
 

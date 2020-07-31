@@ -11,6 +11,7 @@ from qiskit.providers.basebackend import BaseBackend
 from qiskit.providers.baseprovider import BaseProvider
 from qiskit.test.mock.fake_provider import FakeProvider
 from qiskit.providers.quac.simulators import QuacCountsSimulator, QuacDensitySimulator
+from qiskit.providers.quac.models import get_generic_configuration
 from .exceptions import QuacBackendError
 
 
@@ -29,7 +30,15 @@ class QuacProvider(BaseProvider):
 
         ibmq_provider = FakeProvider()
 
-        self._backends = [QuacCountsSimulator(), QuacDensitySimulator()]
+        # Initialize "dummy" generic backends so they appear in the backends list
+        self._backends = [QuacDensitySimulator(get_generic_configuration(n_qubits=1,
+                                                                         max_shots=8000,
+                                                                         max_exp=1,
+                                                                         basis_gates=[])),
+                          QuacCountsSimulator(get_generic_configuration(n_qubits=1,
+                                                                        max_shots=8000,
+                                                                        max_exp=1,
+                                                                        basis_gates=[]))]
 
         # Add IBMQ backends
         for hardware_backend in ibmq_provider.backends():
@@ -77,6 +86,24 @@ class QuacProvider(BaseProvider):
             if meas:
                 self._backends[0].setup_measurement_error()
             return self._backends[0]  # if no name is provided, serve the first backend listed
+        elif name is "generic_density_simulator":
+            return QuacDensitySimulator(
+                get_generic_configuration(
+                    n_qubits=kwargs.get("n_qubits"),
+                    max_shots=kwargs.get("max_shots"),
+                    max_exp=kwargs.get("max_exp"),
+                    basis_gates=kwargs.get("basis_gates")
+                )
+            )
+        elif name is "generic_counts_simulator":
+            return QuacCountsSimulator(
+                get_generic_configuration(
+                    n_qubits=kwargs.get("n_qubits"),
+                    max_shots=kwargs.get("max_shots"),
+                    max_exp=kwargs.get("max_exp"),
+                    basis_gates=kwargs.get("basis_gates")
+                )
+            )
 
         backends = list(filter(lambda backend: backend.name() == name, self._backends))
 
@@ -85,4 +112,7 @@ class QuacProvider(BaseProvider):
 
         if meas:
             backends[0].setup_measurement_error()  # include measurement error if desired
+        else:
+            backends[0].remove_measurement_error()  # just in case user wants to turn off measurement
+
         return backends[0]

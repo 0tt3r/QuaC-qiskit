@@ -1,23 +1,27 @@
 # -*- coding: utf-8 -*-
 
 import time
+import random
 import numpy as np
-from scipy.stats import ks_2samp
-from qiskit import QuantumCircuit, execute, IBMQ
+import matplotlib.pyplot as plt
+from qiskit import QuantumCircuit, execute, IBMQ, Aer
 from qiskit.providers.quac import Quac
 from qiskit.ignis.characterization.coherence import *
 from qiskit.ignis.characterization.coherence import T1Fitter, T2Fitter
+from qiskit.ignis.mitigation.measurement import tensored_meas_cal, TensoredMeasFitter
 from qiskit.providers.ibmq.ibmqbackend import JobStatus
-from qiskit.providers.quac.utils import counts_to_list, get_vec_angle, kl_dist_smoothing
+from qiskit.providers.quac.utils import *
 
 
 def main():
     # Get backends
-    plugin_sim = Quac.get_backend('fake_london_counts_simulator', meas=True)
+    plugin_sim = Quac.get_backend('fake_burlington_density_simulator', meas=True)
 
     IBMQ.load_account()
     provider = IBMQ.get_provider(hub="ibm-q-ornl", group="anl", project="chm168")
-    backend = provider.get_backend("ibmq_london")
+    backend = provider.get_backend("ibmq_burlington")
+
+    sv_sim = Aer.get_backend("statevector_simulator")
 
     # Get calibration circuits
     hardware_props = backend.properties()
@@ -32,32 +36,33 @@ def main():
                                      hardware_props.gate_length('id', [0]) * 1e9,
                                      qubits)
 
+    meas_cal_circs, state_labels = tensored_meas_cal([[i] for i in qubits])
+
     # Build actual circuit
-    # circ = QuantumCircuit(3)
-    # circ.y(0)
-    # circ.x(1)
-    # circ.y(2)
-    # circ.cx(0, 1)
-    # circ.x(2)
-    # circ.y(0)
-    # circ.y(2)
-    # circ.cx(0, 2)
-    # circ.measure_all()
-    circ_ind = [32, 35, 47, 67, 79, 84, 93, 96, 99]
-    circs = []
+    circ_ind = [28, 82, 27, 85, 23, 83, 14, 2, 63, 81, 87, 69, 52, 75, 3, 35, 36, 11, 31, 56, 50, 6,
+                73, 1, 43, 44, 96, 79, 68, 76, 37, 0, 58, 19, 89, 71, 59, 26, 7, 13, 21, 66, 20, 97,
+                17, 53, 78, 18, 24, 61, 30, 16, 92]
+    # while len(circ_ind) < 75 - 22:
+    #     ind = random.randrange(100)
+    #     if ind not in circ_ind:
+    #         circ_ind.append(ind)
+    # print(f"Using circuits: {circ_ind}")
+
+    circs = {}
     for ind in circ_ind:
         circ = QuantumCircuit.from_qasm_file(f"../../test/output/untranspiled_{ind}.qasm")
-        circs.append(circ)
+        circ.name = f"circuit_{ind}"
+        circs[ind] = circ
 
-    # Get experimental results
-    hardware_experiment_job = execute(t1_circs + t2_circs + circs, backend,
-                                      optimization_level=0, shots=8000)
-
-    print("Running job", end="")
-    while hardware_experiment_job.status() != JobStatus.DONE:
-        print(".", end="")
-        time.sleep(5)
-    # hardware_experiment_job = backend.retrieve_job("5f04c329790ba000127184e9")
+    # Get experimental calibration results
+    # hardware_experiment_job = execute(t1_circs + t2_circs + meas_cal_circs + list(circs.values()), backend,
+    #                                   optimization_level=0, shots=8000)
+    #
+    # print("Running job", end="")
+    # while hardware_experiment_job.status() != JobStatus.DONE:
+    #     print(".", end="")
+    #     time.sleep(5)
+    hardware_experiment_job = backend.retrieve_job("5f14bf0ebed433001971c4e3")
 
     t1_fit = T1Fitter(hardware_experiment_job.result(), t1_delay, qubits,
                       fit_p0=[1, 80000, 0],
@@ -69,6 +74,17 @@ def main():
                       fit_bounds=([0, 0, -1], [2, 1e10, 1]),
                       time_unit="nano-seconds")
 
+    meas_fit = TensoredMeasFitter(hardware_experiment_job.result(), [[i] for i in qubits])
+    meas_matrices = meas_fit.cal_matrices
+
+    zz = {(0, 1): 3.143236682931741e-05, (0, 2): 4.3798945172376926e-07, (0, 3): 5.710467343009174e-07,
+          (0, 4): 5.255829128220091e-07, (1, 0): 2.9605797262289958e-05, (1, 2): -2.2201862048211673e-05,
+          (1, 3): 1.1509998231940323e-05, (1, 4): -1.1352178756706967e-06, (2, 0): -4.654590305690487e-07,
+          (2, 1): -3.062206923970773e-05, (2, 3): -3.7459810377513116e-07, (2, 4): 3.3650800003023896e-07,
+          (3, 0): -6.2849536852988e-07, (3, 1): 9.268968720548915e-06, (3, 2): -9.067960754656768e-07,
+          (3, 4): -4.1651763103070784e-06, (4, 0): 9.158131021284599e-07, (4, 1): 1.0867636225178612e-07,
+          (4, 2): 7.950744417123402e-08, (4, 3): -5.827315040873638e-06}  # ZZ values calibrated externally
+
     lindblad = {}
 
     for i in range(len(qubits)):
@@ -77,41 +93,71 @@ def main():
         lindblad[str(i)]["T1"] = t1_fit.time(i)
         lindblad[str(i)]["T2"] = t2_fit.time(i)
 
+    # Get actual hardware circuit results
+    hardware_dist = {}
+    for ind, circ in circs.items():
+        counts = hardware_experiment_job.result().get_counts(circ)
+        counts = counts_to_list(counts)
+        norm = sum(counts)
+        hardware_dist[ind] = [count / norm for count in counts]
+
     # Get plugin simulation results
-    plugin_experiment_job = execute(circs, plugin_sim, optimization_level=0, lindblad=lindblad, shots=8000)
+    plugin_dist = {}
+    for ind, circ in circs.items():
+        dist = execute(circ, plugin_sim, shots=8000,
+                       lindblad=lindblad, meas_mats=meas_matrices, zz=zz,
+                       optimization_level=0).result().get_counts()
+        plugin_dist[ind] = counts_to_list(dist)
 
-    # Perform distribution comparisons
-    for circ in circs:
-        real_counts = counts_to_list(hardware_experiment_job.result().get_counts(circ))
-        real_distribution = [count / sum(real_counts) for count in real_counts]
-        plugin_counts = counts_to_list(plugin_experiment_job.result().get_counts(circ))
-        plugin_distribution = [count / sum(plugin_counts) for count in plugin_counts]
+    # Get theoretical, noiseless results
+    sv_dist = {}
+    for ind, circ in circs.items():
+        circ.remove_final_measurements()
+        dist = execute(circ, sv_sim, shots=8000,
+                       optimization_level=0)
+        sv_dist[ind] = qiskit_statevector_to_probabilities(dist.result().get_statevector(circ),
+                                                           circ.num_qubits)
 
-        print(f"Counts Comparison for Circuit {circ.name}\n------------------------")
-        for cind in range(len(plugin_distribution)):
-            # if real_distribution[ind] < 0.01:
-            #     real_distribution[ind] = 0
-            # if plugin_distribution[ind] < 0.01:
-            #     plugin_distribution[ind] = 0
-            print(f"{real_distribution[cind]}\t{plugin_distribution[cind]}")
+    # Perform comparisons
+    j = 7
+    print(f"Hardware\tPlugin\tSV")
+    for i in range(len(hardware_dist[j])):
+        print(f"{hardware_dist[j][i]}\t{plugin_dist[j][i]}\t{sv_dist[j][i]}")
 
-        print(f"Angle difference: {get_vec_angle(real_distribution, plugin_distribution)}")
-        print(f"""Kullback-Leibler divergence:
-                {kl_dist_smoothing(np.array(real_distribution),np.array(plugin_distribution), 1e-5)
-        }""")
+    angles = []
+    kls = []
+    kss = []
+    for ind in circs:
+        angles.append(get_vec_angle(hardware_dist[ind], plugin_dist[ind]))
+        kls.append(kl_dist_smoothing(hardware_dist[ind], plugin_dist[ind], 1e-5))
+        kss.append(discrete_one_samp_ks(hardware_dist[ind], plugin_dist[ind], 8000))
+        print(f"""
+            Circuit: {ind}
+            KL divergence: {kl_dist_smoothing(hardware_dist[ind], plugin_dist[ind], 1e-5)}
+            Angle divergence: {get_vec_angle(hardware_dist[ind], plugin_dist[ind])}
+            KS D value: {discrete_one_samp_ks(hardware_dist[ind], plugin_dist[ind], 8000)}
+        """)
 
-        # Make experimental results from counts
-        real_experiments = []
-        plugin_experiments = []
-        for exp_ind in range(len(real_counts)):
-            real_experiments.append([exp_ind] * real_counts[exp_ind])
-            plugin_experiments.append([exp_ind] * plugin_counts[exp_ind])
+    print(f"""
+        ------
+        Angle max: {max(angles)}
+        KL Divergence max: {max(kls)}
+        KS Divergence max: {max(kss)}
+    """)
 
-        ks_pvalue = ks_2samp(real_experiments, plugin_experiments)[1]
-        if ks_pvalue > 0.05:
-            print(f"Distributions are identical (p={ks_pvalue}).")
-        else:
-            print(f"Distributions are NOT identical (p={ks_pvalue}).")
+    print(f"""
+        ------
+        Angle avg: {sum(angles) / len(angles)}
+        KL Divergence avg: {sum(kls) / len(kls)}
+        KS Divergence avg: {sum([e[0] for e in kss]) / len(kss)}
+    """)
+
+    print(f"""
+        ------
+        Angle min: {min(angles)}
+        KL Divergence min: {min(kls)}
+        KS Divergence min: {min(kss)}
+    """)
 
 
 if __name__ == '__main__':

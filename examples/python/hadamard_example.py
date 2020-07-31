@@ -22,7 +22,7 @@ def main():
 
     print("Available QuaC backends:")
     print(Quac.backends())
-    simulator = Quac.get_backend('fake_vigo_counts_simulator')
+    simulator = Quac.get_backend('fake_vigo_density_simulator', meas=True)
 
     # Execute the circuit on the QuaC simulator
     job1 = execute(circuit1, simulator, shots=1000)

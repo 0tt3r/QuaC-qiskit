@@ -6,6 +6,7 @@ QuacDensitySimulator class.
 """
 
 import time
+from typing import List
 import numpy as np
 from scipy import sparse
 import warnings
@@ -41,7 +42,8 @@ class QuacDensitySimulator(QuacSimulator):
         """Builds a matrix that operates on raw bitstring probabilities to transform them to
         a vector of probabilities adjusted for measurement errors
         """
-        if self._meas_set:
+        if len(self._measurement_error_matrices) > 0:
+            self._meas_set = True
             return  # already built matrix
 
         # Construct probability matrix for measurement error adjustments
@@ -50,7 +52,6 @@ class QuacDensitySimulator(QuacSimulator):
             try:
                 prob_meas0_prep1 = self._properties.qubit_property(qubit, "prob_meas0_prep1")[0]
                 prob_meas1_prep0 = self._properties.qubit_property(qubit, "prob_meas1_prep0")[0]
-                self._meas_set = True
             except BackendPropertyError:
                 warnings.warn("Measurement error simulation not supported on this backend.")
                 break
@@ -73,6 +74,27 @@ class QuacDensitySimulator(QuacSimulator):
 
             self._measurement_error_matrices.append(expanded_qubit_meas_mat)
 
+    def update_measurement_error(self, mats: List[np.array]):
+        """Updates measurement error (for calibration and optimization)
+        :param mats: 2x2 matrices for each qubit
+        """
+        self._measurement_error_matrices = []
+        for qubit in range(self.configuration().n_qubits):
+            expanded_qubit_meas_mat = sparse.csr_matrix(np.array([1]))
+            for ind in range(self.configuration().n_qubits):
+                if qubit == ind:
+                    expanded_qubit_meas_mat = sparse.kron(expanded_qubit_meas_mat,
+                                                          mats[qubit],
+                                                          format='csr')
+                else:
+                    expanded_qubit_meas_mat = sparse.kron(expanded_qubit_meas_mat,
+                                                          sparse.eye(2),
+                                                          format='csr')
+            self._measurement_error_matrices.append(expanded_qubit_meas_mat)
+
+    def remove_measurement_error(self):
+        self._meas_set = False
+
     def _run_job(self, job_id: str, qobj: QasmQobj, **run_config) -> Result:
         """Specifies how to run a quantum object job on this backend. This is the method that
         changes between types of QuaC backends.
@@ -85,6 +107,10 @@ class QuacDensitySimulator(QuacSimulator):
         qobj_start = time.perf_counter()
         results = list()
 
+        # Update measurement matrices?
+        if run_config.get("meas_mats") is not None:
+            self.update_measurement_error(run_config.get("meas_mats"))
+
         for experiment in qobj.experiments:
             exp_start = time.perf_counter()
             final_quac_instance, qubit_measurements = super()._run_experiment(experiment, **run_config)
@@ -93,15 +119,16 @@ class QuacDensitySimulator(QuacSimulator):
             frequencies = defaultdict(lambda: 0)
 
             # Get probabilities of all states occurring and try to adjust them by measurement errors
-            bitstring_probs = np.array(final_quac_instance.get_bitstring_probs())
+            bitstring_probs = sparse.csr_matrix(final_quac_instance.get_bitstring_probs()).transpose()
             if self._meas_set:
                 # If measurement error simulation is turned on, adjust probabilities accordingly
                 for expanded_qubit_meas_mat in self._measurement_error_matrices:
                     bitstring_probs = np.dot(expanded_qubit_meas_mat, bitstring_probs)
 
             # Switch probability list least significant bit convention and add to dictionary
-            for decimal_state, state_prob in enumerate(bitstring_probs):
+            for decimal_state in range(bitstring_probs.shape[0]):
                 binary_state = bin(decimal_state)[2:]
+                state_prob = bitstring_probs.toarray()[decimal_state][0]
                 padded_outcome_state = list(binary_state.zfill(qobj.config.n_qubits))
                 classical_register = ["0"] * qobj.config.memory_slots
 

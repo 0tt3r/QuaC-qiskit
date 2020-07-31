@@ -93,13 +93,12 @@ def counts_to_list(counts: Dict[str, int]) -> List[int]:
     return counts_list
 
 
-def qiskit_statevector_to_probabilities(statevector: np.array, non_ancilla: int,
-                                        meas_mappings: Dict[int, int]) -> List[float]:
+def qiskit_statevector_to_probabilities(statevector: np.array, non_ancilla: int) -> List[float]:
     """A simple utility to convert Qiskit statevectors to probability lists. Warning: assumes
-    all ancilla bits are the most significant bits.
+    all ancilla bits are the most significant bits. Warning: assumes ancilla bits come last and
+    that measurement was applied via measure_all.
     :param statevector: an np array
     :param non_ancilla: an integer holding the number of non-ancilla bits
-    :param meas_mappings: a list of integer mappings from qubit index to classical register index
     :return: a list of probabilities parallel to input "statevector"
     """
     filtered_probs = [0] * 2 ** non_ancilla
@@ -108,12 +107,28 @@ def qiskit_statevector_to_probabilities(statevector: np.array, non_ancilla: int,
 
     for state_ind, prob in enumerate(probs):
         filtered_state = list(bin(state_ind)[2:].zfill(num_qubits)[-non_ancilla:])
-        filtered_state.reverse()
-        mapped_state = [0] * non_ancilla
+        mapped_state = ['0'] * non_ancilla
         for qubit_ind in range(non_ancilla):
-            mapped_state[meas_mappings[qubit_ind]] = filtered_state[qubit_ind]
+            mapped_state[qubit_ind] = filtered_state[qubit_ind]
         filtered_state_combined = ''.join(mapped_state)
         filtered_state_ind = int(filtered_state_combined, 2)
         filtered_probs[filtered_state_ind] += prob
 
     return filtered_probs
+
+
+def aggregate_counts_results(counts: List[Dict[str, int]], keys: List[str]) -> Dict[str, int]:
+    """Aggregates hardware experiment results so experiments with higher count number can be run
+    :param counts: a list of counts dicts
+    :param keys: a list of statevectors in counts dicts
+    :return: a counts dict summarizing all input counts dicts
+    """
+    aggregate_counts = {}
+    for key in keys:
+        aggregate_counts[key] = 0
+
+    for counts_list in counts:
+        for key in counts_list:
+            aggregate_counts[key] += counts_list[key]
+
+    return aggregate_counts

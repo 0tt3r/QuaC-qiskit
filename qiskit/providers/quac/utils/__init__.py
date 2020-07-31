@@ -4,6 +4,6 @@
 """
 
 from .math import *
-from .benchmarking import add_parallel_id
+from .benchmarking import *
 from .formatting import *
 from .schedule import *
