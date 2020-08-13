@@ -4,18 +4,14 @@
 simulations of a Qiskit-defined quantum circuit. Functionality is located in the
 QuacDensitySimulator class.
 """
-
 import time
-from typing import List
 import numpy as np
 from scipy import sparse
-import warnings
 from collections import defaultdict
 from qiskit.result import Result
 from qiskit.qobj.qasm_qobj import QasmQobj
 from qiskit.providers.models.backendproperties import BackendProperties
-from qiskit.providers import BackendPropertyError
-from .quac_simulator import QuacSimulator
+from qiskit.providers.quac.simulators import QuacSimulator
 
 
 class QuacDensitySimulator(QuacSimulator):
@@ -38,63 +34,6 @@ class QuacDensitySimulator(QuacSimulator):
         """
         return self._properties
 
-    def setup_measurement_error(self):
-        """Builds a matrix that operates on raw bitstring probabilities to transform them to
-        a vector of probabilities adjusted for measurement errors
-        """
-        if len(self._measurement_error_matrices) > 0:
-            self._meas_set = True
-            return  # already built matrix
-
-        # Construct probability matrix for measurement error adjustments
-        for qubit in range(self.configuration().n_qubits):
-            # Not all backends have measurement errors added
-            try:
-                prob_meas0_prep1 = self._properties.qubit_property(qubit, "prob_meas0_prep1")[0]
-                prob_meas1_prep0 = self._properties.qubit_property(qubit, "prob_meas1_prep0")[0]
-            except BackendPropertyError:
-                warnings.warn("Measurement error simulation not supported on this backend.")
-                break
-
-            qubit_measurement_error_matrix = np.array([
-                [1 - prob_meas1_prep0, prob_meas0_prep1],
-                [prob_meas1_prep0, 1 - prob_meas0_prep1]
-            ])
-
-            expanded_qubit_meas_mat = sparse.csr_matrix(np.array([1]))
-            for ind in range(self.configuration().n_qubits):
-                if qubit == ind:
-                    expanded_qubit_meas_mat = sparse.kron(expanded_qubit_meas_mat,
-                                                          qubit_measurement_error_matrix,
-                                                          format='csr')
-                else:
-                    expanded_qubit_meas_mat = sparse.kron(expanded_qubit_meas_mat,
-                                                          sparse.eye(2),
-                                                          format='csr')
-
-            self._measurement_error_matrices.append(expanded_qubit_meas_mat)
-
-    def update_measurement_error(self, mats: List[np.array]):
-        """Updates measurement error (for calibration and optimization)
-        :param mats: 2x2 matrices for each qubit
-        """
-        self._measurement_error_matrices = []
-        for qubit in range(self.configuration().n_qubits):
-            expanded_qubit_meas_mat = sparse.csr_matrix(np.array([1]))
-            for ind in range(self.configuration().n_qubits):
-                if qubit == ind:
-                    expanded_qubit_meas_mat = sparse.kron(expanded_qubit_meas_mat,
-                                                          mats[qubit],
-                                                          format='csr')
-                else:
-                    expanded_qubit_meas_mat = sparse.kron(expanded_qubit_meas_mat,
-                                                          sparse.eye(2),
-                                                          format='csr')
-            self._measurement_error_matrices.append(expanded_qubit_meas_mat)
-
-    def remove_measurement_error(self):
-        self._meas_set = False
-
     def _run_job(self, job_id: str, qobj: QasmQobj, **run_config) -> Result:
         """Specifies how to run a quantum object job on this backend. This is the method that
         changes between types of QuaC backends.
@@ -107,9 +46,10 @@ class QuacDensitySimulator(QuacSimulator):
         qobj_start = time.perf_counter()
         results = list()
 
-        # Update measurement matrices?
-        if run_config.get("meas_mats") is not None:
-            self.update_measurement_error(run_config.get("meas_mats"))
+        # Update noise model if injected
+        job_noise_model = self._quac_noise_model
+        if run_config.get("quac_noise_model"):
+            job_noise_model = run_config.get("quac_noise_model")
 
         for experiment in qobj.experiments:
             exp_start = time.perf_counter()
@@ -120,9 +60,9 @@ class QuacDensitySimulator(QuacSimulator):
 
             # Get probabilities of all states occurring and try to adjust them by measurement errors
             bitstring_probs = sparse.csr_matrix(final_quac_instance.get_bitstring_probs()).transpose()
-            if self._meas_set:
+            if job_noise_model.has_meas():
                 # If measurement error simulation is turned on, adjust probabilities accordingly
-                for expanded_qubit_meas_mat in self._measurement_error_matrices:
+                for expanded_qubit_meas_mat in job_noise_model.meas():
                     bitstring_probs = np.dot(expanded_qubit_meas_mat, bitstring_probs)
 
             # Switch probability list least significant bit convention and add to dictionary

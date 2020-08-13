@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 
+"""A brief example showing the workflow of simulation with the plugin.
+"""
 import math
 import matplotlib.pyplot as plt
-from qiskit import QuantumCircuit, execute, ClassicalRegister, QuantumRegister
+from qiskit import QuantumCircuit, execute
 from qiskit.tools.visualization import plot_histogram
 from qiskit.providers.quac import Quac
 
@@ -25,9 +27,9 @@ def main():
     simulator = Quac.get_backend('fake_vigo_density_simulator', meas=True)
 
     # Execute the circuit on the QuaC simulator
-    job1 = execute(circuit1, simulator, shots=1000)
-    job2 = execute(circuit2, simulator, shots=1000)
-    job3 = execute(circuit3, simulator, shots=1000)
+    job1 = execute(circuit1, simulator)
+    job2 = execute(circuit2, simulator)
+    job3 = execute(circuit3, simulator)
 
     print(f"Hadamard counts: {job1.result().get_counts()}")
     print(f"U2 counts: {job2.result().get_counts()}")

@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""
-This module contains the generic configuration for QuaC backends and can be changed as additional
+"""This module contains the generic configuration for QuaC backends and can be changed as additional
 gates and functionality become available.
 """
 
@@ -11,8 +10,7 @@ from qiskit.providers.models.backendconfiguration import QasmBackendConfiguratio
 
 def get_generic_configuration(n_qubits: int, max_shots: Optional[int] = 8000, max_exp: Optional[int] = 1,
                               basis_gates: Optional[List[str]] = None) -> QasmBackendConfiguration:
-    """
-    Returns a generic backend configuration for users wishing to define their own hardware
+    """Returns a generic backend configuration for users wishing to define their own hardware
     Note: defaults are max_shots=8000,
     :param n_qubits: the number of qubits in the hardware
     :param max_shots: the maximum number of shots per experiment that can be run

@@ -11,7 +11,7 @@ setuptools.setup(
     version="0.0.1",
     author="The QuaC/Qiskit Integration Development Team",
     author_email="",
-    description="A package to allow simulation of quantum systems built in Qiskit on quac simulators",
+    description="A package to allow simulation of quantum systems built in Qiskit on QuaC simulators",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/0tt3r/QuaC-qiskit",
@@ -25,5 +25,3 @@ setuptools.setup(
     keywords="qiskit quac integration backend",
     python_requires='>=3.7'
 )
-
-print("success")

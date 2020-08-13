@@ -9,17 +9,17 @@
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-
+#
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../qiskit/providers/quac'))
+sys.path.insert(0, os.path.abspath('../qiskit'))
 
 
 # -- Project information -----------------------------------------------------
 
-project = 'QuaC-Qiskit'
-copyright = '2020, The QuaC/Qiskit Integration Development Team'
-author = 'The QuaC/Qiskit Integration Development Team'
+project = 'QuaC-Qiskit Plugin'
+copyright = '2020, The QuaC-Qiskit Plugin Development Team'
+author = 'The QuaC-Qiskit Plugin Development Team'
 
 # The full version, including alpha/beta/rc tags
 release = '0.0.1'
@@ -31,7 +31,8 @@ release = '0.0.1'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.autodoc'
+    "sphinx.ext.autodoc",
+    "sphinx_rtd_theme"
 ]
 
 # Add any paths that contain templates here, relative to this directory.

@@ -3,7 +3,6 @@
 """This module contains a QuaC job class whose objects are to be submitted to a process executor
 pool. This extends the Qiskit BasicAer job class
 """
-
 from qiskit.providers.jobstatus import JobStatus
 from qiskit.providers.basicaer import BasicAerJob
 from qiskit.providers.exceptions import JobError

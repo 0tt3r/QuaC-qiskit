@@ -7,9 +7,11 @@ Subpackages
 .. toctree::
    :maxdepth: 4
 
+   qiskit.providers.quac.format
    qiskit.providers.quac.models
+   qiskit.providers.quac.optimization
    qiskit.providers.quac.simulators
-   qiskit.providers.quac.utils
+   qiskit.providers.quac.stat
 
 Submodules
 ----------

@@ -4,15 +4,14 @@
 a specified number of times. This simulator is subject to stochastic noise. For comparisons and
 benchmarking, the density backend is recommended.
 """
-
 import time
 import numpy as np
 from collections import defaultdict
 from qiskit.result import Result
 from qiskit.qobj.qasm_qobj import QasmQobj
 from qiskit.providers.models.backendproperties import BackendProperties
-from .quac_simulator import QuacSimulator
-from ..utils import choose_index
+from qiskit.providers.quac.simulators import QuacSimulator
+from ..stat import choose_index
 
 
 class QuacCountsSimulator(QuacSimulator):
@@ -35,11 +34,6 @@ class QuacCountsSimulator(QuacSimulator):
         """
         return self._properties
 
-    def setup_measurement_error(self):
-        """Informs counts backend that measurement errors should be applied during trials
-        """
-        self._meas_set = True
-
     def _run_job(self, job_id: str, qobj: QasmQobj, **run_config) -> Result:
         """Specifies how to run a quantum object job on this backend. This is the method that
         changes between types of QuaC backends.
@@ -51,6 +45,11 @@ class QuacCountsSimulator(QuacSimulator):
         """
         qobj_start = time.perf_counter()
         results = list()
+
+        # Update noise model if injected
+        job_noise_model = self._quac_noise_model
+        if run_config.get("quac_noise_model"):
+            job_noise_model = run_config.get("quac_noise_model")
 
         for experiment in qobj.experiments:
             exp_start = time.perf_counter()
@@ -69,12 +68,11 @@ class QuacCountsSimulator(QuacSimulator):
                 classical_register = ["0"] * qobj.config.memory_slots
 
                 for qubit, outcome in enumerate(padded_outcome_state):
-                    if self._meas_set:
+                    if job_noise_model.has_meas():
                         # Alter outcome if measurement error is desired
                         flipped_outcome = str(int(outcome) ^ 1)
-                        flip_prob = self._properties.qubit_property(qubit,
-                                                                    f"prob_meas{flipped_outcome}_prep{outcome}")[0]
-                        if not choose_index([flip_prob, 1 - flip_prob]):
+                        flip_prob = job_noise_model.flip_prob(qubit, int(outcome), int(flipped_outcome))
+                        if choose_index([flip_prob, 1 - flip_prob]) == 0:
                             outcome = flipped_outcome
 
                     # Only measure specified qubits into the classical register

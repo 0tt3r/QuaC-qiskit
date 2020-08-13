@@ -28,6 +28,14 @@ qiskit.providers.quac.simulators.quac\_simulator module
    :undoc-members:
    :show-inheritance:
 
+qiskit.providers.quac.simulators.schedule module
+------------------------------------------------
+
+.. automodule:: qiskit.providers.quac.simulators.schedule
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 
 Module contents
 ---------------

@@ -1,43 +1,25 @@
 # -*- coding: utf-8 -*-
 
-"""This module contains math-related utility functions for the QuaC-Qiskit plugin
+"""This module contains comparison-related statistics (or metric) functions for the QuaC-Qiskit plugin
 """
-
-from typing import List, Union, Tuple
-import random
+from typing import List, Tuple, Union
+import warnings
 import math
 import numpy as np
 from scipy.special import kl_div
 
 
-def choose_index(prob_dist: Union[List[float], np.array]) -> int:
-    """Chooses an index i from a list l with probability l[i]
+def get_vec_angle(vec1: List, vec2: List) -> Union[float, None]:
+    """Calculates the degree angle between two vectors
 
-    :param prob_dist: a list of floating point probabilities
-    :type prob_dist: List[float]
-    :return: an integer representing the chosen index
-    """
-
-    chooser = random.random()
-    upper_limit = 0
-    lower_limit = 0
-
-    for i, prob in enumerate(prob_dist):
-        upper_limit += prob
-        if lower_limit <= chooser < upper_limit:
-            return i
-        lower_limit += prob
-
-    # return -1  #  TODO: update when bitstring bug is fixed
-    return 0
-
-
-def get_vec_angle(vec1: List, vec2: List) -> float:
-    """Calculates the degree angle between to vectors
     :param vec1: a list of vector entries
     :param vec2: a list of vector entries
     :return: a float
     """
+    if np.linalg.norm(np.array(vec1)) == 0 or np.linalg.norm(np.array(vec2)) == 0:
+        warnings.warn("Do not input 0 vector")
+        return
+
     diff_degree = np.dot(np.array(vec1), np.array(vec2))
     diff_degree /= np.linalg.norm(np.array(vec1))
     diff_degree /= np.linalg.norm(np.array(vec2))
@@ -47,10 +29,11 @@ def get_vec_angle(vec1: List, vec2: List) -> float:
 
 
 def kl_dist_smoothing(distribution1: np.array, distribution2: np.array, epsilon: float) -> float:
-    """Calculates the Kullback-Leibler Divergence of distribution2 from distribution1.
+    """Calculates the Kullback-Leibler Divergence of distribution2 from distribution1
+
     :param distribution1: a numpy array representing a probability distribution
     :param distribution2: a numpy array representing a probability distribution
-    :param epsilon: the smoothing parameter
+    :param epsilon: a smoothing parameter
     :return: the Kullback-Leibler divergence
     """
     # Performs smoothing
@@ -67,7 +50,8 @@ def kl_dist_smoothing(distribution1: np.array, distribution2: np.array, epsilon:
 
 def discrete_one_samp_ks(distribution1: np.array, distribution2: np.array, num_samples: int) -> Tuple[float, bool]:
     """Uses the one-sample Kolmogorov-Smirnov test to determine if the empirical results in
-    distribution1 come from the distribution represented in distribution2.
+    distribution1 come from the distribution represented in distribution2
+
     :param distribution1: empirical distribution (numpy array)
     :param distribution2: reference distribution (numpy array)
     :param num_samples: number of samples used to generate distribution1

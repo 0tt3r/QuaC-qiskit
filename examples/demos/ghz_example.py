@@ -1,25 +1,25 @@
 # -*- coding: utf-8 -*-
 
-# This example demonstrates the applying measurement error to a GHZ circuit in the
-# plugin. Additionally, the use of multiple classical registers is demonstrated.
-
+"""This example demonstrates the applying measurement error to a GHZ circuit in the
+plugin. Additionally, the use of multiple classical registers is demonstrated.
+"""
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister, execute
 from qiskit.visualization import plot_histogram
 from qiskit.providers.quac import Quac
+from qiskit.providers.quac.format import quac_time_qasm_transpiler
 import matplotlib.pyplot as plt
 
 
 if __name__ == '__main__':
-    # Note: measurement errors are included by setting the "meas" option to true
-    # There is a larger frequency of state |00100> and |11011> because the third
-    # qubit of this hardware is particularly noisy compared to the others:
-    # Qubit  |  P(0 | 1)  |  P(1 | 0)
-    #  0         0.012        0.021
-    #  1         0.027        0.007
-    #  2         0.376        0.225
-    #  3         0.025        0.031
-    #  4         0.053        0.021
-    simulator = Quac.get_backend('fake_yorktown_counts_simulator', meas=True)
+    # Note: measurement errors are included by setting the "meas" option to True
+    # Qubit         P(0 | 1)              P(1 | 0)
+    #  0	    0.10799999999999998	       0.024
+    #  1	    0.039000000000000035	   0.004
+    #  2	    0.026	                   0.009000000000000008
+    #  3	    0.03400000000000003	       0.005
+    #  4	    0.135             	       0.019
+    print(Quac.backends())
+    simulator = Quac.get_backend('fake_bogota_counts_simulator', t1=False, t2=False, meas=True, zz=True)
 
     # Build the GhZ circuit over five qubits
     quantum_register = QuantumRegister(4, "qreg")
@@ -47,3 +47,6 @@ if __name__ == '__main__':
     plot_histogram(quac_job.result().get_counts())
     plt.title("GHZ States")
     plt.show()
+
+    print("TIMEQASM of GHZ Circuit:")
+    print(quac_time_qasm_transpiler(ghz_circ, simulator))

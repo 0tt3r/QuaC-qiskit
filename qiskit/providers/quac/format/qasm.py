@@ -1,19 +1,17 @@
 # -*- coding: utf-8 -*-
 
-"""This module contains functions useful for QuaC
+"""This module contains functions for generating QASM with QuaC
 """
-
-from typing import Dict, List
 import re
-import math
 import numpy as np
 from qiskit import QuantumCircuit, assemble, transpile
 from qiskit.providers import BaseBackend
-from .schedule import list_schedule_experiment
+from qiskit.providers.quac.simulators import list_schedule_experiment
 
 
 def quac_time_qasm_transpiler(circuit: QuantumCircuit, backend: BaseBackend) -> str:
     """Converts a circuit of type QuantumCircuit to a string of TIMEQASM specification
+
     :param circuit: a QuantumCircuit (need not be transpiled)
     :param backend: a specific backend to generate the QASM for (for tranpsilation)
     :return: a string containing necessary QASM with times for each gate
@@ -44,7 +42,8 @@ def quac_time_qasm_transpiler(circuit: QuantumCircuit, backend: BaseBackend) -> 
 
 
 def quac_qasm_transpiler(qiskit_qasm: str) -> str:
-    """Converts Qiskit-generated QASM instructions into QuaC supported instructions
+    """Converts Qiskit-generated QASM instructions into QuaC-supported instructions
+
     :param qiskit_qasm: a string with a QASM program
     :return: a string with a modified QuaC-supported QASM program
     """
@@ -78,57 +77,3 @@ def quac_qasm_transpiler(qiskit_qasm: str) -> str:
         quac_qasm += line + "\n"
 
     return quac_qasm
-
-
-def counts_to_list(counts: Dict[str, int]) -> List[int]:
-    """Converts counts to a list representation.
-    :param counts: a Qiskit-style counts dictionary
-    :return: a list of integers
-    """
-    num_qubits = len(list(counts.keys())[0].replace(' ', ''))
-    counts_list = [0] * 2 ** num_qubits
-    for state in counts:
-        f_state = state.replace(' ', '')
-        counts_list[int(f_state, 2)] = counts[state]
-    return counts_list
-
-
-def qiskit_statevector_to_probabilities(statevector: np.array, non_ancilla: int) -> List[float]:
-    """A simple utility to convert Qiskit statevectors to probability lists. Warning: assumes
-    all ancilla bits are the most significant bits. Warning: assumes ancilla bits come last and
-    that measurement was applied via measure_all.
-    :param statevector: an np array
-    :param non_ancilla: an integer holding the number of non-ancilla bits
-    :return: a list of probabilities parallel to input "statevector"
-    """
-    filtered_probs = [0] * 2 ** non_ancilla
-    probs = [np.absolute(entry) ** 2 for entry in statevector]
-    num_qubits = int(math.log2(len(statevector)))
-
-    for state_ind, prob in enumerate(probs):
-        filtered_state = list(bin(state_ind)[2:].zfill(num_qubits)[-non_ancilla:])
-        mapped_state = ['0'] * non_ancilla
-        for qubit_ind in range(non_ancilla):
-            mapped_state[qubit_ind] = filtered_state[qubit_ind]
-        filtered_state_combined = ''.join(mapped_state)
-        filtered_state_ind = int(filtered_state_combined, 2)
-        filtered_probs[filtered_state_ind] += prob
-
-    return filtered_probs
-
-
-def aggregate_counts_results(counts: List[Dict[str, int]], keys: List[str]) -> Dict[str, int]:
-    """Aggregates hardware experiment results so experiments with higher count number can be run
-    :param counts: a list of counts dicts
-    :param keys: a list of statevectors in counts dicts
-    :return: a counts dict summarizing all input counts dicts
-    """
-    aggregate_counts = {}
-    for key in keys:
-        aggregate_counts[key] = 0
-
-    for counts_list in counts:
-        for key in counts_list:
-            aggregate_counts[key] += counts_list[key]
-
-    return aggregate_counts

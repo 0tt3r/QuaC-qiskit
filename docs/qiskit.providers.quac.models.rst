@@ -12,6 +12,14 @@ qiskit.providers.quac.models.generic\_backend\_configuration module
    :undoc-members:
    :show-inheritance:
 
+qiskit.providers.quac.models.noise\_model module
+------------------------------------------------
+
+.. automodule:: qiskit.providers.quac.models.noise_model
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 qiskit.providers.quac.models.quac\_gates module
 -----------------------------------------------
 
@@ -20,10 +28,10 @@ qiskit.providers.quac.models.quac\_gates module
    :undoc-members:
    :show-inheritance:
 
-qiskit.providers.quac.models.quacjob module
--------------------------------------------
+qiskit.providers.quac.models.quac\_job module
+---------------------------------------------
 
-.. automodule:: qiskit.providers.quac.models.quacjob
+.. automodule:: qiskit.providers.quac.models.quac_job
    :members:
    :undoc-members:
    :show-inheritance:

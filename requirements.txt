@@ -1,4 +1,4 @@
-qiskit-terra>=0.19.1
+qiskit-terra>=0.15.1
 QuaC>=1.0
 scipy>=1.4.1
 nevergrad>=0.4.1

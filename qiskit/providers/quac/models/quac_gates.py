@@ -2,7 +2,6 @@
 
 """This module that contains a class that expands on the native Qiskit gate set
 """
-
 from qiskit.quantum_info import Operator
 
 
