@@ -50,13 +50,14 @@ pip install .
 ```
 
 ## Features Overview
-The features available in this plugin fall under three primary umbrellas.
+The features available in this plugin fall under four primary umbrellas.
 #### 1. Noise modeling
 The plugin supports the modeling of four types of noise: T1 noise, T2 noise, measurement error, and ZZ coupling error. Noise is defined by using a QuaC noise model object of type `QuacNoiseModel`. The `QuacNoiseModel` constructor takes T1 and T2 noise as lists. The index of a given time constant is its associated qubit index (so, t1=[50000, 60000] would indicate that qubit 0 has a T1 constant of 50000 nanoseconds, for example). T1 and T2 noise must be specified; if you would like T1 and T2 noise to be ignored for a certain qubit, you can set its corresponding time constant to `float('inf')`. 
 
 The user has the option to specify measurement error and ZZ coupling terms. The constructor takes measurement error as a list of 2x2 matrices, with index again specifying the corresponding qubit. The matrices should be formulated as follows:
 
 | P(measure 0 | prepped 0) P(measure 0 | prepped 1) |
+
 | P(measure 1 | prepped 0) P(measure 1 | prepped 1) |
 
 The constructor takes ZZ coupling terms as a dictionary mapping ordered pairs of qubit indices to GHz ZZ values. Due to the symmetry of adding ZZ coupling to qubit pair Hamiltonians, ZZ coupling should only be specified for qubit index pairs where the first element is smaller than the second. As an example, the ZZ coupling between qubits 0 and 1 should be specified in the dictionary as {(0, 1): ZZ_val}, while (1, 0) should be left out.
@@ -164,6 +165,9 @@ The QuaC-qiskit plugin offers a variety of utilities designed to improve user ex
 A user wishing to exert fine-grain control over the specific time each gate in a given circuit is executed may inject a list of gate times into the Qiskit `execute` function using the `gate_times` key. Please note that the circuit must be pre-transpiled; otherwise, the list of times will not match the gates generated after swaps are generated to conform to device coupling maps, for example.
 
 Other injectable parameters are `dt`, which specifies that time step the Lindblad solver should use, and `simulation_length`, which specifies the length of time for which time stepping should proceed. These parameters should be added into the `kwargs` of the `execute` function, just as gate times are above.
+
+## Documentation
+HTML documentation can be build by navigating to the `docs` folder and running the command `make html`. Then, open the file `./docs/_build/html/index.html` in any web browser.
 
 ## Examples
 Examples can be found under the `examples` folder in the plugin source code.

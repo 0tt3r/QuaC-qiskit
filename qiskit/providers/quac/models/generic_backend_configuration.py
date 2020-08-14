@@ -25,17 +25,17 @@ def get_generic_configuration(n_qubits: int, max_shots: Optional[int] = 8000, ma
                        'cxz', 'czx', 'cmz', 'cz']
 
     return QasmBackendConfiguration(
-            backend_name="generic_quac",
-            backend_version="0.0.1",
-            n_qubits=n_qubits,
-            basis_gates=basis_gates,
-            gates=[],
-            coupling_map=[],
-            local=True,
-            simulator=True,
-            conditional=True,
-            max_experiments=max_exp,
-            max_shots=max_shots,
-            memory=True,
-            open_pulse=False
-        )  # configuration for QuaC backends
+        backend_name="generic_quac",
+        backend_version="0.0.1",
+        n_qubits=n_qubits,
+        basis_gates=basis_gates,
+        gates=[],
+        coupling_map=[],
+        local=True,
+        simulator=True,
+        conditional=True,
+        max_experiments=max_exp,
+        max_shots=max_shots,
+        memory=True,
+        open_pulse=False
+    )  # configuration for QuaC backends
