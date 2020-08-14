@@ -38,7 +38,7 @@ cd QuaC
 make
 cd python
 make
-python setup.py install
+cc=mpicc python setup.py install
 ```
 
 Now that QuaC is installed, you can install the Qiskit-Quac plugin:
