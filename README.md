@@ -167,7 +167,7 @@ A user wishing to exert fine-grain control over the specific time each gate in a
 Other injectable parameters are `dt`, which specifies that time step the Lindblad solver should use, and `simulation_length`, which specifies the length of time for which time stepping should proceed. These parameters should be added into the `kwargs` of the `execute` function, just as gate times are above.
 
 ## Documentation
-HTML documentation can be build by navigating to the `docs` folder and running the command `make html`. Then, open the file `./docs/_build/html/index.html` in any web browser.
+HTML documentation can be built by navigating to the `docs` folder and running the command `make html`. Then, open the file `./docs/_build/html/index.html` in any web browser.
 
 ## Examples
 Examples can be found under the `examples` folder in the plugin source code.
