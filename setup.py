@@ -15,7 +15,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/0tt3r/QuaC-qiskit",
-    packages=['qiskit.providers.quac'],
+    packages=['qiskit'],
     install_requires=requirements,
     classifiers=[
         "Programming Language :: Python :: 3",
