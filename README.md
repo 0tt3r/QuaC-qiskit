@@ -65,7 +65,7 @@ The constructor takes ZZ coupling terms as a dictionary mapping ordered pairs of
 Here is an example of specifying a QuaC noise model with all four noise components present:
 ```python
 import numpy as np
-from qiskit.providers.quac.models import QuacNoiseModel
+from quac_qiskit.models import QuacNoiseModel
 
 noise_model = QuacNoiseModel([1234, 1324, 1432, 1342, 1243],
                              [100123, 100432, 10234, 10233, 12543],
@@ -75,7 +75,7 @@ noise_model = QuacNoiseModel([1234, 1324, 1432, 1342, 1243],
 Now, the noise model can be injected into the Qiskit native command `execute` via the `quac_noise_model` key:
 ```python
 from qiskit import QuantumCircuit, execute
-from qiskit.providers.quac import Quac
+from quac_qiskit import Quac
 from qiskit.visualization import plot_histogram
 
 backend = Quac.get_backend('fake_yorktown_density_simulator')
@@ -99,11 +99,11 @@ The user may specify their own divergence metric, or use one of the three provid
 
 ```python
 from qiskit import IBMQ, execute
-from qiskit.providers.quac import Quac
+from quac_qiskit import Quac
 from qiskit.test.mock import FakeBurlington
 from qiskit.ignis.characterization.coherence import t1_circuits, t2_circuits
-from qiskit.providers.quac.optimization import *
-from qiskit.providers.quac.models import QuacNoiseModel
+from quac_qiskit.optimization import *
+from quac_qiskit.models import QuacNoiseModel
 
 # Get backends
 IBMQ.load_account()

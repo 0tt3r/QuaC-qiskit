@@ -8,8 +8,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from qiskit import QuantumCircuit, execute
 from qiskit.visualization import plot_histogram
-from qiskit.providers.quac import Quac
-from qiskit.providers.quac.models import QuacNoiseModel
+from quac_qiskit import Quac
+from quac_qiskit.models import QuacNoiseModel
 
 
 def main():

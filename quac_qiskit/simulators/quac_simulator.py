@@ -18,9 +18,9 @@ from qiskit.providers.basebackend import BaseBackend
 from qiskit.providers.models.backendconfiguration import BackendConfiguration, QasmBackendConfiguration
 from qiskit.providers.models.backendproperties import BackendProperties
 from qiskit.result import Result
-from qiskit.providers.quac.models import QuacJob, QuacNoiseModel
-from qiskit.providers.quac.exceptions import QuacOptionsError, QuacBackendError
-from .schedule import list_schedule_experiment, no_schedule_experiment
+from quac_qiskit.models import QuacJob, QuacNoiseModel
+from quac_qiskit.exceptions import QuacOptionsError, QuacBackendError
+from .schedule import list_schedule_experiment
 
 
 class QuacSimulator(BaseBackend):

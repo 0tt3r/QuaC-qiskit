@@ -11,7 +11,7 @@ import nevergrad as ng
 from qiskit import QuantumCircuit
 from qiskit.providers import BaseBackend
 from qiskit.result import Result
-from qiskit.providers.quac.models import QuacNoiseModel
+from quac_qiskit.models import QuacNoiseModel
 
 
 def optimize_noise_model_ng(guess_noise_model: QuacNoiseModel, circuits: List[QuantumCircuit],

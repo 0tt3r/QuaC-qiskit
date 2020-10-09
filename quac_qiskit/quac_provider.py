@@ -9,8 +9,8 @@ import quac
 from qiskit.providers.basebackend import BaseBackend
 from qiskit.providers.baseprovider import BaseProvider
 from qiskit.test.mock.fake_provider import FakeProvider
-from qiskit.providers.quac.simulators import QuacCountsSimulator, QuacDensitySimulator
-from qiskit.providers.quac.models import get_generic_configuration, QuacNoiseModel
+from quac_qiskit.simulators import QuacCountsSimulator, QuacDensitySimulator
+from quac_qiskit.models import get_generic_configuration, QuacNoiseModel
 from .exceptions import QuacBackendError
 
 

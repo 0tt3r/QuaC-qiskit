@@ -11,8 +11,8 @@ from qiskit.circuit.random import random_circuit
 from qiskit.ignis.characterization import t1_circuits, T1Fitter, t2_circuits, T2Fitter, zz_circuits, ZZFitter
 from qiskit.ignis.mitigation import TensoredMeasFitter
 from qiskit.test.mock import FakeYorktown
-from qiskit.providers.quac import Quac
-from qiskit.providers.quac.models import QuacNoiseModel
+from quac_qiskit import Quac
+from quac_qiskit.models import QuacNoiseModel
 
 
 class NoiseModelTestCase(unittest.TestCase):

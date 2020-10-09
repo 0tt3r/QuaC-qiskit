@@ -3,12 +3,12 @@
 """Demonstrates plugin noise model optimization abilities by recovering T1 noise from an ideal
 user-defined noise model.
 """
-from qiskit import IBMQ, execute
-from qiskit.providers.quac import Quac
+from qiskit import IBMQ
+from quac_qiskit import Quac
 from qiskit.test.mock import FakeBurlington
 from qiskit.ignis.characterization.coherence import t1_circuits, t2_circuits
-from qiskit.providers.quac.optimization import *
-from qiskit.providers.quac.models import QuacNoiseModel
+from quac_qiskit.optimization import *
+from quac_qiskit.models import QuacNoiseModel
 
 
 def main():

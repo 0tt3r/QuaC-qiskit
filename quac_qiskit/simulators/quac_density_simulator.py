@@ -11,7 +11,7 @@ from collections import defaultdict
 from qiskit.result import Result
 from qiskit.qobj.qasm_qobj import QasmQobj
 from qiskit.providers.models.backendproperties import BackendProperties
-from qiskit.providers.quac.simulators import QuacSimulator
+from quac_qiskit.simulators import QuacSimulator
 
 
 class QuacDensitySimulator(QuacSimulator):

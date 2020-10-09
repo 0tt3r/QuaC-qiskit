@@ -5,8 +5,8 @@
 import unittest
 from qiskit import QuantumCircuit, assemble, transpile
 from qiskit.test.mock import FakeBogota
-from qiskit.providers.quac import Quac
-from qiskit.providers.quac.simulators import list_schedule_experiment
+from quac_qiskit import Quac
+from quac_qiskit.simulators import list_schedule_experiment
 
 
 class ScheduleTestCase(unittest.TestCase):

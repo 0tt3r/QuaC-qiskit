@@ -6,10 +6,10 @@ in the library.
 import unittest
 from qiskit import execute, Aer
 from qiskit.circuit.random import random_circuit
-from qiskit.providers.quac import Quac
-from qiskit.providers.quac.format import *
-from qiskit.providers.quac.models import QuacNoiseModel
-from qiskit.providers.quac.stat import *
+from quac_qiskit import Quac
+from quac_qiskit.format import *
+from quac_qiskit.models import QuacNoiseModel
+from quac_qiskit.stat import *
 
 
 class GateAdditionTestCase(unittest.TestCase):

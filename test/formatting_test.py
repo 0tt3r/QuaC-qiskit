@@ -5,8 +5,8 @@ in the library.
 """
 import unittest
 from qiskit import execute, Aer
-from qiskit.providers.quac import Quac
-from qiskit.providers.quac.format import *
+from quac_qiskit import Quac
+from quac_qiskit.format import *
 
 
 class FormattingTestCase(unittest.TestCase):

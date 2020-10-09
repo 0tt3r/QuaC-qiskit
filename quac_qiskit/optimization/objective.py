@@ -6,9 +6,9 @@ from typing import List
 import numpy as np
 from qiskit import QuantumCircuit, execute
 from qiskit.result import Result
-from qiskit.providers.quac.stat import kl_dist_smoothing, discrete_one_samp_ks, get_vec_angle
-from qiskit.providers.quac.format import counts_to_list
-from qiskit.providers.quac.models import QuacNoiseModel
+from quac_qiskit.stat import kl_dist_smoothing, discrete_one_samp_ks, get_vec_angle
+from quac_qiskit.format import counts_to_list
+from quac_qiskit.models import QuacNoiseModel
 
 
 def kl_div_sum(circuits: List[QuantumCircuit], simulation_result: Result, reference_result: Result) -> float:

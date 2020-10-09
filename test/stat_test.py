@@ -6,7 +6,7 @@ in the library.
 import random
 import unittest
 import numpy as np
-from qiskit.providers.quac.stat import get_vec_angle, kl_dist_smoothing, discrete_one_samp_ks, choose_index
+from quac_qiskit.stat import get_vec_angle, kl_dist_smoothing, discrete_one_samp_ks, choose_index
 
 
 class StatTestCase(unittest.TestCase):

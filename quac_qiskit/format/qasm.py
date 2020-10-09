@@ -3,10 +3,9 @@
 """This module contains functions for generating QASM with QuaC
 """
 import re
-import numpy as np
 from qiskit import QuantumCircuit, assemble, transpile
 from qiskit.providers import BaseBackend
-from qiskit.providers.quac.simulators import list_schedule_experiment
+from quac_qiskit.simulators import list_schedule_experiment
 
 
 def quac_time_qasm_transpiler(circuit: QuantumCircuit, backend: BaseBackend) -> str:

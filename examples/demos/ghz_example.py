@@ -5,8 +5,8 @@ plugin. Additionally, the use of multiple classical registers is demonstrated.
 """
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister, execute
 from qiskit.visualization import plot_histogram
-from qiskit.providers.quac import Quac
-from qiskit.providers.quac.format import quac_time_qasm_transpiler
+from quac_qiskit import Quac
+from quac_qiskit.format import quac_time_qasm_transpiler
 import matplotlib.pyplot as plt
 
 

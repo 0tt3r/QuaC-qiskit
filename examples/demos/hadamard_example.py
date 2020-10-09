@@ -6,7 +6,7 @@ import math
 import matplotlib.pyplot as plt
 from qiskit import QuantumCircuit, execute
 from qiskit.tools.visualization import plot_histogram
-from qiskit.providers.quac import Quac
+from quac_qiskit import Quac
 
 
 def main():
